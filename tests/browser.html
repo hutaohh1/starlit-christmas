@@ -1,0 +1,33 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>圣诞树功能验证</title><style>body{background:#101820;color:#e4c98e;font:16px system-ui;padding:40px}button{padding:14px}li{margin:16px 0}</style><h1>圣诞树功能验证</h1><button id="run">运行验证</button><ol id="results"></ol><script type="module">
+import {savePhoto,loadPhotos,deletePhoto,DEFAULT_POSTCARDS,makePostcard} from '/src/photos.js';
+import {ChristmasMusic} from '/src/music.js';
+const out=document.querySelector('#results');
+const report=text=>{const li=document.createElement('li');li.textContent=text;out.append(li);};
+document.querySelector('#run').onclick=async()=>{
+  document.querySelector('#run').disabled=true;
+  try{
+    const id='qa-'+crypto.randomUUID(),before=await loadPhotos();
+    await savePhoto({id,src:'/postcards/winter-cabin.webp',caption:'QA 临时照片',isDefault:false});
+    if(!(await loadPhotos()).some(p=>p.id===id))throw Error('照片保存失败');
+    await deletePhoto(id);const after=await loadPhotos();
+    if(after.some(p=>p.id===id)||after.length!==before.length)throw Error('照片删除失败');
+    report('通过：上传照片保存、摘下和重新读取，原有照片保留');
+    await Promise.all(DEFAULT_POSTCARDS.map(async(_,i)=>{const image=new Image();image.src=makePostcard(i).src;await image.decode();if(image.naturalWidth<600)throw Error('图片尺寸异常');}));
+    report('通过：六张本地生成插画均成功解码');
+    let audio;const music=new ChristmasMusic({createAudio:src=>(audio=new Audio(src)),readStored:async()=>null,persistTrack:async()=>{}});
+    music.attach('/.reference/loop-test.wav','QA 静音测试');music.setVolume(0);await music.start();
+    let wraps=0,previous=audio.currentTime;
+    for(let i=0;i<16;i++){await new Promise(r=>setTimeout(r,100));if(audio.currentTime<previous)wraps++;previous=audio.currentTime;}
+    music.stop();
+    if(!audio.loop||wraps<2)throw Error('循环没有实际生效');
+    report('通过：原生本地音频实际连续循环 '+wraps+' 次，无需重复按钮（静音测试素材）');
+    const bundled=new ChristmasMusic({readStored:async()=>null});bundled.setVolume(0);await bundled.start();
+    const player=bundled.audio;if(!player.src.endsWith('taylor-swift-last-christmas.ogg')||player.duration<190)throw Error('用户视频音频未接入');
+    player.currentTime=player.duration-.25;
+    await new Promise(r=>setTimeout(r,1100));
+    const looped=player.currentTime<2&&!player.paused;bundled.stop();if(!looped)throw Error('视频音频未能从尾部自动循环');
+    report('通过：实际网页配乐约 '+Math.round(player.duration)+' 秒，来自本地文件，尾部自动循环已验证');
+    report('全部浏览器验证通过');
+  }catch(error){report('失败：'+error.message);}
+};
+</script></html>

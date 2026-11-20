@@ -1,0 +1,21 @@
+{
+  "name": "starlit-christmas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/versions.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.js",
+    "setup:vision": "node scripts/setup-vision.mjs",
+    "deploy": "npm run build && node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
+    "three": "0.181.1"
+  },
+  "devDependencies": {
+    "vite": "^6.4.6"
+  }
+}

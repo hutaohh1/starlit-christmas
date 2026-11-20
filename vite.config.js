@@ -1,0 +1,2 @@
+import { defineConfig } from 'vite';
+export default defineConfig({base:'./',server:{host:'0.0.0.0',port:5173,strictPort:true},build:{chunkSizeWarningLimit:650,rollupOptions:{input:{main:'index.html',first:'version-1.html',second:'version-2.html',third:'version-3.html'},output:{manualChunks(id){if(id.includes('tasks-vision'))return 'hand-tracking';if(id.includes('three'))return 'three-scene';}}}}});

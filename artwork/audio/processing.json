@@ -1,0 +1,26 @@
+{
+  "source": "c9a87edad1001939447e5c6137aa2274.mp4",
+  "originalAudio": "video-original.m4a",
+  "originalSeconds": 201.468345,
+  "sampleRate": 44100,
+  "samples": 8884754,
+  "crossfadeSamples": 39771,
+  "crossfadeSeconds": 0.9018367346938776,
+  "crossfadeCurves": [
+    "qsin",
+    "qsin"
+  ],
+  "order": [
+    "middle",
+    "tail-crossfaded-with-head"
+  ],
+  "targetLufs": -18.5,
+  "targetTruePeak": -1.5,
+  "output": "public/music/taylor-swift-last-christmas.mp3",
+  "encoding": "Vorbis quality 5 for sample-accurate duration; MP3 quality 2 fallback",
+  "outputs": [
+    "public/music/taylor-swift-last-christmas.ogg",
+    "public/music/taylor-swift-last-christmas.mp3"
+  ],
+  "outputSeconds": 200.56650793650795
+}
