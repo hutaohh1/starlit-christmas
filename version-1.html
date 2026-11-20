@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#070d15" />
+    <meta name="description" content="一棵由星光组成的圣诞树。张开手，让回忆散落；握紧手，让温暖重聚。" />
+    <title>星愿圣诞 · 初雪版 V1</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath fill='%23e4c98e' d='m20 2 5 12 13 1-10 9 3 13-11-7-11 7 3-13L2 15l13-1z'/%3E%3C/svg%3E" />
+    <script type="module" crossorigin src="./assets/three-scene-B6Ibza_L.js"></script>
+    <script type="module" crossorigin src="./assets/main-DWmhSPwp.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-Bbmywajd.css">
+  </head>
+  <body data-edition="1">
+    <div id="scene" aria-label="可交互的金色粒子圣诞树"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <header class="header ui">
+      <a class="brand" href="./" aria-label="星愿圣诞首页"><span class="brand-star">✳</span><span>星愿圣诞<span class="brand-en">A little Christmas magic</span></span></a>
+      <div class="tools">
+        <span class="scene-status"><i></i><span id="scene-status">星光正在聚拢</span></span>
+        <button class="icon-button" id="sound-button" aria-label="开启音乐" title="开启音乐"></button>
+        <button class="icon-button" id="settings-button" aria-label="场景设置" aria-expanded="false" title="场景设置"></button>
+        <button class="icon-button" id="fullscreen-button" aria-label="进入全屏" title="进入全屏"></button>
+      </div>
+    </header>
+    <nav class="edition-nav ui" aria-label="切换版本"><a href="./version-1.html" data-edition-link="1">初雪 <span>V1</span></a><a href="./version-2.html" data-edition-link="2">星芒 <span>V2</span></a><a href="./version-3.html" data-edition-link="3">光影 <span>V3</span></a></nav>
+    <main class="intro ui">
+      <span class="intro-kicker"><span></span>许一个冬天的愿望</span>
+      <h1>Merry<br />Christmas<span class="title-period">.</span></h1>
+      <p class="intro-copy">把平凡的瞬间，<br />变成一整棵树的星光。</p>
+      <button class="gesture-button" id="gesture-button"><span id="gesture-icon"></span><span id="gesture-button-label">开启手势魔法</span><span class="button-arrow">↗</span></button>
+      <p class="privacy-note" id="privacy-note">允许摄像头，试试隔空点亮圣诞</p>
+      <button class="guide-link" id="guide-button">怎么玩 <span>↗</span></button>
+    </main>
+    <aside class="music-panel ui" id="music-panel" hidden aria-label="圣诞音乐">
+      <div class="panel-heading"><div><span>Last Christmas</span><small>本地音频 · 默认循环播放</small></div><button class="icon-button small" id="close-music-panel" aria-label="收起音乐面板">×</button></div>
+      <div class="music-cover" aria-hidden="true"><span>♪</span><strong>Last Christmas</strong><small>TAYLOR SWIFT</small></div><p id="music-file-name">Taylor Swift — Last Christmas</p>
+      <p id="music-status" role="status">本地播放 · 到结尾自动循环</p>
+      <div class="music-controls"><button id="music-play-pause" class="text-button">播放</button><label for="music-volume">音量</label><input type="range" id="music-volume" min="0" max="100" value="35" aria-label="音乐音量" /></div>
+      <div class="music-links"><span>仅在本机保存与播放</span><button id="local-music-button">选择本地音频</button></div>
+      <input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" id="local-music-input" hidden />
+    </aside>
+    <aside class="settings-panel ui" id="settings-panel" hidden aria-label="场景设置">
+      <div class="panel-heading"><span>让圣诞，更像你</span><button class="icon-button small" id="close-settings" aria-label="关闭设置"></button></div>
+      <label class="setting-row" for="snow-toggle">漫天飘雪<input id="snow-toggle" type="checkbox" checked role="switch" /></label>
+      <label class="setting-row" for="rotate-toggle">缓缓旋转<input id="rotate-toggle" type="checkbox" checked role="switch" /></label>
+      <label class="setting-range" for="glow-range"><span>星光亮度<span id="glow-value">70%</span></span><input type="range" min="20" max="100" value="70" id="glow-range" /></label>
+      <label class="setting-range" for="hand-sensitivity"><span>手势灵敏度<span id="hand-sensitivity-value">100%</span></span><input type="range" min="50" max="150" value="100" id="hand-sensitivity" /></label>
+      <div class="theme-label">圣诞的颜色</div>
+      <div class="theme-options"><button class="swatch active" data-theme="gold" aria-label="香槟金" aria-pressed="true" title="香槟金"></button><button class="swatch" data-theme="ice" aria-label="冰雪蓝" aria-pressed="false" title="冰雪蓝"></button><button class="swatch" data-theme="rose" aria-label="玫瑰金" aria-pressed="false" title="玫瑰金"></button></div>
+      <button class="text-button" id="hide-ui-button">隐藏界面，沉浸赏树 <kbd>H</kbd></button>
+    </aside>
+    <div class="camera-panel ui" id="camera-panel" hidden>
+      <video id="camera-video" autoplay playsinline muted></video><canvas id="hand-overlay"></canvas>
+      <div class="camera-label"><i></i><span id="camera-status">寻找你的手…</span><button id="close-camera" aria-label="关闭摄像头">×</button></div>
+    </div>
+    <div class="gesture-cursor" id="gesture-cursor" hidden><span id="gesture-cursor-label"></span></div>
+    <footer class="footer ui">
+      <div class="gesture-hints"><div><span id="fist-icon"></span><span>握拳<span class="hint-detail">聚拢星光</span></span></div><div><span id="palm-icon"></span><span>张掌<span class="hint-detail">漫天星河</span></span></div><div><span id="pinch-icon"></span><span>捏合<span class="hint-detail">拾起回忆</span></span></div></div>
+      <div class="bottom-center"><nav class="mode-dock" aria-label="场景模式"><button class="mode-button active" data-mode="tree" aria-pressed="true"><span id="tree-icon"></span><span>圣诞树</span></button><button class="mode-button" data-mode="scatter" aria-pressed="false"><span id="scatter-icon"></span><span>漫天星河</span></button><button class="mode-button" data-mode="memories" aria-pressed="false"><span id="memories-icon"></span><span>我的回忆</span><span id="photo-count">6</span></button></nav><span class="interaction-tip" id="interaction-tip">拖动旋转 · 滚轮缩放 · 按空格散开</span></div>
+      <div class="upload-area"><button id="upload-button"><span id="upload-icon"></span>挂上我的照片 <span>＋</span></button><span><span id="album-status">正在连接共享相册…</span></span></div>
+    </footer>
+    <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp,image/avif" multiple hidden />
+    <button id="show-ui-button" class="restore-ui" hidden aria-label="显示界面">显示界面 <kbd>H</kbd></button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog class="guide-dialog" id="guide-dialog"><button class="dialog-close" id="close-guide" aria-label="关闭玩法说明">×</button><span class="dialog-star">✦</span><h2>一点手势，一场圣诞魔法</h2><p>打开摄像头，伸出手掌；手势保持一小会儿即可识别。</p><div class="guide-steps"><div><span>✊</span><h3>握紧拳头</h3><p>散落的星光重新聚成圣诞树。</p></div><div><span>✋</span><h3>张开手掌</h3><p>让圣诞树化作满天星河。</p></div><div><span>🤏</span><h3>捏合手指</h3><p>食指移到照片上，亮框后轻轻捏合即可打开。</p></div></div><p class="guide-alternative">张开手掌移动，可以转动视角；两手拉开放大、靠拢缩小。查看照片时，张掌左右轻挥可切换，握拳关闭。也可以拖动旋转、滚轮缩放，按空格切换聚散，H 隐藏界面。</p><p class="local-note">手势只在本机识别。开启共享后，选择的照片会公开保存在 GitHub，所有访客可见。</p><button class="primary-button" id="guide-done">去许个愿吧</button></dialog>
+    <dialog class="photo-dialog" id="photo-dialog"><button class="dialog-close" id="close-photo" aria-label="关闭照片">×</button><div class="photo-view"><img id="focused-photo" alt="圣诞回忆" /><span id="focused-caption"></span></div><div class="photo-navigation"><button id="previous-photo" aria-label="上一张照片">←</button><span id="photo-position"></span><button id="next-photo" aria-label="下一张照片">→</button></div><button id="remove-photo" class="remove-photo" hidden>摘下这张照片</button><p id="photo-sharing-note" hidden></p><p>此刻，就是最好的礼物。</p></dialog>
+    <div id="loading-screen"><span class="loading-star">✦</span><span>正在收集冬夜的星光</span><div class="loading-line"></div></div>
+  </body>
+</html>
+
