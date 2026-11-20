@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "starlit-christmas-album",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-21",
+  "workers_dev": true,
+  "vars": {
+    "GITHUB_REPOSITORY": "hutaohh1/starlit-christmas",
+    "ALBUM_BRANCH": "album",
+    "ALLOWED_ORIGINS": "https://hutaohh1.github.io,http://localhost:5173,http://localhost:5174"
+  },
+  "ratelimits": [{"name": "UPLOAD_LIMITER", "namespace_id": "1001", "simple": {"limit": 5, "period": 60}}]
+}

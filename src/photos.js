@@ -38,8 +38,8 @@ export async function readPhoto(file){
   if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type))throw new Error('请选择 JPG、PNG、WebP 或 AVIF 照片。');
   if(file.size>20*1024*1024)throw new Error('单张照片请小于 20 MB。');
   const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
-  const scale=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));
+  const scale=Math.min(1,1200/Math.max(bitmap.width,bitmap.height));
   const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
   canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-  return {id:crypto.randomUUID(),src:canvas.toDataURL('image/jpeg',.87),caption:file.name.replace(/\.[^.]+$/,'').slice(0,50),isDefault:false};
+  return {id:crypto.randomUUID(),src:canvas.toDataURL('image/jpeg',.78),caption:file.name.replace(/\.[^.]+$/,'').slice(0,50),isDefault:false};
 }

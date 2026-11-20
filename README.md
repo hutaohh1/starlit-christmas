@@ -11,7 +11,7 @@
 - 光影 V3：http://localhost:5173/version-3.html — 冷暖灯光、柔和阴影、雪地反光。
 - 默认首页：http://localhost:5173/ — 光影 V3。
 
-页面左上角可以直接切换三个版本；三版共享照片，并分别加载自己的灯光、粒子与材质参数。
+页面左上角可以直接切换三个版本；三版共享相册入口，并分别加载自己的灯光、粒子与材质参数。
 
 ## 启动
 
@@ -31,11 +31,11 @@ npm run dev
 - 鼠标拖动或单指拖动旋转，滚轮或双指捏合缩放。
 - 底部三个按钮切换圣诞树、星河、回忆模式；点击 3D 相框查看大图。
 - 空格切换聚散，H 隐藏 / 显示界面；照片弹窗内左右方向键切换，Esc 关闭。
-- 「挂上我的照片」支持 JPG、PNG、WebP、AVIF，每张小于 20 MB，最多保留 24 张自选照片；会缩小后存入当前浏览器的 IndexedDB。
+- 「挂上我的照片」支持 JPG、PNG、WebP、AVIF，每张小于 20 MB，最多保留 24 张自选照片；共享接口开通后会压缩并公开存入 GitHub 的 album 分支，其他访客约 30 秒内自动看到；接口未开通时会明确提示仅保存在当前浏览器。
 - 打开自己上传的照片后，点击「摘下这张照片」可以从场景和本机保存记录中移除；不会修改原始图片文件。六张默认插画会保留。
 - 右上角可播放本地音乐、调整雪花与旋转、切换三种配色及调整光亮。手势圆环为淡色提示，顶部浮动手势说明已移除。
 
-摄像头只在主动点击后开启，关闭时释放摄像头。摄像头画面与照片只在浏览器本机处理，没有上传接口。摄像头需要 localhost 或 HTTPS；从手机访问局域网 HTTP 地址可赏树和触屏操作，开启手机手势需部署至 HTTPS。
+摄像头只在主动点击后开启，关闭时释放摄像头。摄像头画面仅在浏览器本机处理。共享接口开通后，主动选择的照片会上传到 GitHub 公开相册；上传前按钮下方会显示「照片公开挂上 · 所有人可见」。摄像头需要 localhost 或 HTTPS；从手机访问局域网 HTTP 地址可赏树和触屏操作，开启手机手势需部署至 HTTPS。
 
 默认的 6 张冬日插画使用用户指定的 game-creator 生成，WebP 文件位于 `public/postcards`，原图与提示词位于 `artwork`。手势与渲染所需资源都通过本地服务器提供，无远程照片依赖。
 
@@ -78,3 +78,12 @@ npm run deploy
 ```
 
 `deploy` 会重新构建并推送静态成品到 `gh-pages` 分支；源代码保留在 `main` 分支。它使用当前 Git 的登录和作者配置，不包含任何访问令牌。
+
+## 在线网址与共享照片
+
+- 首页：https://hutaohh1.github.io/starlit-christmas/
+- 初雪：https://hutaohh1.github.io/starlit-christmas/version-1.html
+- 星芒：https://hutaohh1.github.io/starlit-christmas/version-2.html
+- 光影：https://hutaohh1.github.io/starlit-christmas/version-3.html
+
+共享照片代码与部署脚本已实现。实际开通仍需网站主人登录 Cloudflare 并设置本仓库专用的 GitHub 写入 secret；详见 [backend/README.md](backend/README.md)。不需要访客跳转 GitHub，也不向浏览器暴露写入令牌。

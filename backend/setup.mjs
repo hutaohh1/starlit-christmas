@@ -1,0 +1,26 @@
+import {execFileSync,spawnSync} from 'node:child_process';
+import {readFile,writeFile} from 'node:fs/promises';
+const executable=process.platform==='win32'?'npx.cmd':'npx';
+const run=args=>{const result=spawnSync(executable,args,{stdio:'inherit',shell:process.platform==='win32',windowsHide:true});if(result.status!==0)throw new Error('配置未完成，请根据上方提示重试。');};
+const config='backend/wrangler.jsonc';
+console.log('此脚本会登录 Cloudflare 并部署共享上传接口；照片仍存入 GitHub 的 album 分支。');
+run(['wrangler','login']);
+console.log('\n请创建仅授权 hutaohh1/starlit-christmas、Contents: Read and write 的 GitHub fine-grained token。');
+console.log('在接下来的隐藏输入框粘贴令牌。令牌只保存为云端 secret，不会写入网页或仓库。');
+run(['wrangler','secret','put','GITHUB_TOKEN','--config',config]);
+run(['wrangler','deploy','--config',config]);
+// Wrangler keeps its deployment account profile locally. Resolve the production URL through its API.
+console.log('\n部署后复制上方 https://starlit-christmas-album.…workers.dev 地址。');
+const {createInterface}=await import('node:readline/promises');
+const prompt=createInterface({input:process.stdin,output:process.stdout});
+const answer=(await prompt.question('上传接口地址：')).trim();prompt.close();
+const url=new URL(answer);if(url.protocol!=='https:'||!url.hostname.endsWith('.workers.dev'))throw new Error('请输入刚部署的 HTTPS workers.dev 地址。');
+const health=await fetch(new URL('/health',url));const status=await health.json();
+if(!health.ok||!status.ready||status.repository!=='hutaohh1/starlit-christmas')throw new Error('接口尚未就绪，请检查 GitHub secret。');
+const settings=JSON.parse(await readFile('public/shared-config.json','utf8'));settings.apiUrl=url.origin;await writeFile('public/shared-config.json',JSON.stringify(settings,null,2)+'\n');
+const npm=process.platform==='win32'?'npm.cmd':'npm';const deployed=spawnSync(npm,['run','deploy'],{stdio:'inherit',shell:process.platform==='win32',windowsHide:true});
+if(deployed.status!==0)throw new Error('接口已配置，但网页发布未完成，请运行 npm run deploy。');
+execFileSync('git',['add','public/shared-config.json'],{stdio:'inherit',windowsHide:true});
+execFileSync('git',['commit','-m','Connect shared photo upload API'],{stdio:'inherit',windowsHide:true});
+execFileSync('git',['push'],{stdio:'inherit',windowsHide:true});
+console.log('共享上传已连接。请在两个不同浏览器中验证上传和查看。');
