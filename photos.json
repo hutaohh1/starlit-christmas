@@ -1,12 +1,4 @@
 {
   "version": 1,
-  "photos": [
-    {
-      "id": "80afaebe-af2c-4337-9937-e6c4014fec40",
-      "path": "photos/80afaebe-af2c-4337-9937-e6c4014fec40.jpg",
-      "caption": "postcards-preview",
-      "ownerHash": "6bffe6487743c2ceed6121606f311b0c1e7c1ac19850099a9a7b25c4c9772af1",
-      "createdAt": "2026-11-20T20:26:47.178Z"
-    }
-  ]
+  "photos": []
 }
