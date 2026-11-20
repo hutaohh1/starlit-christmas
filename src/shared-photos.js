@@ -31,7 +31,8 @@ export function sharedEntries(manifest, config, hash = '') {
 }
 export async function loadSharedPhotos() {
   const config = await sharedConfig();
-  const url = `https://raw.githubusercontent.com/${config.repository}/${config.branch}/photos.json?t=${Math.floor(Date.now() / 30000)}`;
+  // GitHub's raw branch URLs can retain an old manifest for several minutes.
+  const url = config.apiUrl ? config.apiUrl.replace(/\/$/, '') + '/photos' : `https://raw.githubusercontent.com/${config.repository}/${config.branch}/photos.json?t=${Math.floor(Date.now() / 30000)}`;
   const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
   if (!response.ok) throw new Error('共享相册连接不上，稍后会自动重试。');
   let hash = ''; try { hash = (await identity()).hash; } catch {}

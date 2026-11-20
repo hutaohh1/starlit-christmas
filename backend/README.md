@@ -7,10 +7,11 @@
 - 仓库：hutaohh1/starlit-christmas。
 - 网页：GitHub Pages，gh-pages 分支。
 - 照片和 photos.json：album 分支。代码和手势等资源：main 分支。
-- 前端与接口已实现，自动测试覆盖多人同时上传、权限、删除、错误处理。
+- 共享上传已开通：https://starlit-christmas-album.starlit-christmas.workers.dev。
+- 本仓库专用 GitHub 写入令牌存于 Cloudflare 加密 secret。自动测试覆盖多人同时上传、权限、删除、错误处理。
 - `public/shared-config.json` 的 apiUrl 为空时，共享写入尚未开通。网页会明确提示「仅保存在本机」，不会声称已共享。
 
-## 网站主人一次性开通
+## 重新部署或迁移时的一次性开通
 
 在项目目录运行：
 

@@ -1,1 +1,5 @@
-{"apiUrl":"","repository":"hutaohh1/starlit-christmas","branch":"album"}
+{
+  "apiUrl": "https://starlit-christmas-album.starlit-christmas.workers.dev",
+  "repository": "hutaohh1/starlit-christmas",
+  "branch": "album"
+}

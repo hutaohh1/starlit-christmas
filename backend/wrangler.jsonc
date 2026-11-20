@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "starlit-christmas-album",
   "main": "worker.js",
-  "compatibility_date": "2026-11-21",
+  "compatibility_date": "2026-11-19",
   "workers_dev": true,
   "vars": {
     "GITHUB_REPOSITORY": "hutaohh1/starlit-christmas",
@@ -11,3 +11,4 @@
   },
   "ratelimits": [{"name": "UPLOAD_LIMITER", "namespace_id": "1001", "simple": {"limit": 5, "period": 60}}]
 }
+

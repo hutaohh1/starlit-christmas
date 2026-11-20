@@ -18,13 +18,13 @@ export function validatePhoto(input) {
   return { encoded, caption: caption || '一个圣诞瞬间' };
 }
 export class GitHubAlbum {
-  constructor(env, fetcher = fetch) { this.env = env; this.fetcher = fetcher; }
+  constructor(env, fetcher = (...args) => fetch(...args)) { this.env = env; this.fetcher = fetcher; }
   async api(path, method = 'GET', body) {
     const response = await this.fetcher(`https://api.github.com/repos/${this.env.GITHUB_REPOSITORY}/${path}`, {
       method, headers: { Authorization: `Bearer ${this.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Starlit-Christmas-Album', 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000)
     });
-    if (!response.ok) { const error = new Error('共享相册暂时无法写入，请稍后重试。'); error.status = response.status; throw error; }
+    if (!response.ok) { console.warn('GitHub album request failed', method, path.split('?')[0], response.status); const error = new Error('共享相册暂时无法写入，请稍后重试。'); error.status = response.status; throw error; }
     return response.json();
   }
   async snapshot() {
@@ -109,7 +109,7 @@ export function createWorker(albumFactory = env => new GitHubAlbum(env)) {
           }
         } else response = json({ error: '接口不存在。' }, 404);
       }
-    } catch (error) { response = json({ error: error instanceof HttpError ? error.message : '共享相册暂时连接不上，请稍后重试。' }, error instanceof HttpError ? error.status : 503); }
+    } catch (error) { console.warn('Album request error', error.name, error.message); response = json({ error: error instanceof HttpError ? error.message : '共享相册暂时连接不上，请稍后重试。' }, error instanceof HttpError ? error.status : 503); }
     for (const [key, value] of Object.entries(headers)) if (value) response.headers.set(key, value);
     return response;
   } };
