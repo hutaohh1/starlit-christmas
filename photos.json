@@ -1,4 +1,12 @@
 {
   "version": 1,
-  "photos": []
+  "photos": [
+    {
+      "id": "59d2c18a-c0b5-4af3-b445-2dbb78858401",
+      "path": "photos/59d2c18a-c0b5-4af3-b445-2dbb78858401.jpg",
+      "caption": "Album QA 1795240466512",
+      "ownerHash": "5c14373c9eb58053c87c063f6161bb26907a1a985d0ceba224f9e803dbbe102b",
+      "createdAt": "2026-11-21T05:54:31.807Z"
+    }
+  ]
 }
