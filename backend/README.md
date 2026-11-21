@@ -1,6 +1,6 @@
 # 共享照片：GitHub 存储 + Cloudflare 上传接口
 
-目标操作：访客点击网页「挂上我的照片」→ 选图 → 图片写入 GitHub → 其他访客约 30 秒内自动看到。访客不需要 GitHub 账号。
+目标操作：访客点击网页「挂上我的照片」→ 选图 → 图片写入 GitHub → 访问者打开网页即可看到共享照片，保持网页打开也会定期同步。访客不需要 GitHub 账号。
 
 ## 当前状态
 
@@ -43,7 +43,15 @@ ALLOWED_ORIGINS 只允许 GitHub Pages 和本机开发端口。生产无需额�
 - 云端接口不可用时不会把本机保存误报成共享成功。
 - 仓库及 Worker 的托管配额、存储与请求限制由服务方决定；令牌到期后需要更新 secret。
 
-## 检查
+## 更新与检查
+
+Worker 备用网页与 GitHub Pages 使用同一份构建产物。前端改动后先构建，再部署 Worker 与 GitHub Pages。
+
+```powershell
+npm run build
+npx wrangler deploy --config backend/wrangler.jsonc
+node scripts/deploy.mjs
+```
 
 ```powershell
 npm test

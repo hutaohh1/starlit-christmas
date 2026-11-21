@@ -1,53 +1,75 @@
 import { assetUrl } from './assets.js';
 const KEY = 'starlit-shared-photo-owner';
 let configuration, owner, pending;
+async function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+const apiPath = (config, path) => config.apiUrl.replace(/\/$/, '') + path;
+const rawPath = (config, path) => `https://raw.githubusercontent.com/${config.repository}/${config.branch}/${path}`;
 export async function sharedConfig() {
-  if (!configuration) configuration = fetch(assetUrl('shared-config.json'), { cache: 'no-store' }).then(async response => {
+  if (!configuration) configuration = fetchWithTimeout(assetUrl('shared-config.json'), { cache: 'no-store' }, 8000).then(async response => {
     if (!response.ok) throw new Error('共享相册配置加载失败，请刷新重试。');
     return response.json();
   }).catch(error => { configuration = null; throw error; });
   return configuration;
 }
-async function identity() {
-  if (owner) return owner;
+function identity() {
+  if (!owner) owner = loadIdentity().catch(error => { owner = null; throw error; });
+  return owner;
+}
+async function loadIdentity() {
   let secret;
-  try {
-    secret = localStorage.getItem(KEY);
-    if (!/^[a-f0-9]{64}$/.test(secret || '')) {
-      secret = [...crypto.getRandomValues(new Uint8Array(32))].map(n => n.toString(16).padStart(2, '0')).join('');
-      localStorage.setItem(KEY, secret);
-    }
-  } catch { throw new Error('请允许浏览器保存照片记录后重试。'); }
-  const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret)))].map(n => n.toString(16).padStart(2, '0')).join('');
-  return owner = { secret, hash };
+  try { secret = localStorage.getItem(KEY); } catch {}
+  if (!/^[a-f0-9]{64}$/.test(secret || '')) {
+    secret = [...crypto.getRandomValues(new Uint8Array(32))].map(n => n.toString(16).padStart(2, '0')).join('');
+    try { localStorage.setItem(KEY, secret); } catch {}
+  }
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  const hash = [...new Uint8Array(digest)].map(n => n.toString(16).padStart(2, '0')).join('');
+  return { secret, hash };
 }
 export function sharedEntries(manifest, config, hash = '') {
   if (!Array.isArray(manifest?.photos)) throw new Error('共享相册格式异常。');
-  return manifest.photos.filter(p => /^[a-f0-9-]{36}$/i.test(p.id) && p.path === `photos/${p.id}.jpg`).map(p => ({
+  return manifest.photos.filter(p => p && /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(p.id) && p.path === `photos/${p.id}.jpg`).map(p => ({
     id: `shared-${p.id}`, sharedId: p.id,
-    src: `https://raw.githubusercontent.com/${config.repository}/${config.branch}/${p.path}`,
+    src: config.apiUrl ? apiPath(config, '/photos/' + p.id) : rawPath(config, p.path),
+    fallbackSrc: config.apiUrl ? rawPath(config, p.path) : undefined,
     caption: typeof p.caption === 'string' ? p.caption.slice(0, 50) : '一个圣诞瞬间', isDefault: false, isShared: true, canRemove: Boolean(hash) && hash === p.ownerHash
   }));
 }
 export async function loadSharedPhotos() {
   const config = await sharedConfig();
-  // GitHub's raw branch URLs can retain an old manifest for several minutes.
-  const url = config.apiUrl ? config.apiUrl.replace(/\/$/, '') + '/photos' : `https://raw.githubusercontent.com/${config.repository}/${config.branch}/photos.json?t=${Math.floor(Date.now() / 30000)}`;
-  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
-  if (!response.ok) throw new Error('共享相册连接不上，稍后会自动重试。');
-  let hash = ''; try { hash = (await identity()).hash; } catch {}
-  return sharedEntries(await response.json(), config, hash);
+  const candidates = [config.apiUrl && apiPath(config, '/photos'), rawPath(config, 'photos.json')].filter(Boolean);
+  let hash = '';
+  try { hash = (await identity()).hash; } catch {}
+  for (const url of candidates) {
+    try {
+      const response = await fetchWithTimeout(url, { cache: 'no-store' }, 6000);
+      if (response.ok) return sharedEntries(await response.json(), config, hash);
+    } catch {}
+  }
+  throw new Error('共享相册暂时连不上，稍后会自动重试。');
 }
 async function mutate(path, method, input) {
   const config = await sharedConfig();
   if (!config.apiUrl) throw new Error('共享上传尚未开通，目前只能挂在自己的浏览器里。');
   const { secret } = await identity();
-  const response = await fetch(config.apiUrl.replace(/\/$/, '') + path, {
-    method, headers: { 'Content-Type': 'application/json', 'X-Photo-Owner': secret },
-    body: input ? JSON.stringify(input) : undefined, signal: AbortSignal.timeout(60000)
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || '照片没有上传成功，请重试。');
+  let response;
+  try {
+    response = await fetchWithTimeout(apiPath(config, path), {
+      method,
+      // A simple POST lets browsers send the upload without a separate CORS preflight.
+      headers: input ? { 'Content-Type': 'text/plain;charset=UTF-8' } : { 'X-Photo-Owner': secret },
+      body: input ? JSON.stringify({ ...input, owner: secret }) : undefined
+    }, 45000);
+  } catch {
+    throw new Error('连接不上共享上传服务。请换个网络后重试。');
+  }
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !Object.keys(result).length) throw new Error(result.error || '共享上传服务暂时不可用，请稍后重试。');
   return result;
 }
 export async function uploadSharedPhoto(photo) {
@@ -59,8 +81,8 @@ export async function uploadSharedPhoto(photo) {
     const config = await sharedConfig(), own = await identity();
     const shared = sharedEntries({ photos: [result.photo] }, config, own.hash)[0];
     if (!shared) throw new Error('照片已提交，但返回记录不完整，请刷新查看。');
-    // Display the selected image immediately while GitHub's image cache updates.
-    return { ...shared, src: photo.src, remoteSrc: shared.src };
+    // Show the chosen image immediately while other visitors fetch the new entry.
+    return { ...shared, src: photo.src };
   });
   pending = job; try { return await job; } finally { if (pending === job) pending = null; }
 }

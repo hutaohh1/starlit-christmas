@@ -34,12 +34,44 @@ export async function deletePhoto(id){
   const database=await db();
   await new Promise((resolve,reject)=>{const tx=database.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('照片移除失败，请重试。'));});
 }
-export async function readPhoto(file){
-  if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type))throw new Error('请选择 JPG、PNG、WebP 或 AVIF 照片。');
-  if(file.size>20*1024*1024)throw new Error('单张照片请小于 20 MB。');
-  const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
-  const scale=Math.min(1,1200/Math.max(bitmap.width,bitmap.height));
-  const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
-  canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-  return {id:crypto.randomUUID(),src:canvas.toDataURL('image/jpeg',.78),caption:file.name.replace(/\.[^.]+$/,'').slice(0,50),isDefault:false};
+async function decodePhoto(file) {
+  if (typeof createImageBitmap === 'function') {
+    try { return await createImageBitmap(file); } catch {}
+  }
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = url;
+    });
+    return image;
+  } catch {
+    throw new Error('浏览器打不开这张照片，请试试 JPG 或 PNG。');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+export async function readPhoto(file) {
+  const supportedType = /^image\/(?:jpeg|png|webp|avif)$/i.test(file.type);
+  const supportedName = /\.(?:jpe?g|png|webp|avif)$/i.test(file.name);
+  if (!supportedType && !supportedName) throw new Error('请选择 JPG、PNG、WebP 或 AVIF 照片。');
+  if (file.size > 20 * 1024 * 1024) throw new Error('单张照片请小于 20 MB。');
+  const image = await decodePhoto(file);
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) throw new Error('浏览器无法转换照片，请试试 Chrome 或 Edge。');
+    const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    let src = canvas.toDataURL('image/jpeg', .78);
+    if (src.length > 1398100) src = canvas.toDataURL('image/jpeg', .62);
+    const id = [...crypto.getRandomValues(new Uint8Array(16))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+    return { id, src, caption: file.name.replace(/\.[^.]+$/, '').slice(0, 50), isDefault: false };
+  } finally {
+    image.close?.();
+  }
 }

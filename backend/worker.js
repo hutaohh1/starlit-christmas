@@ -27,14 +27,29 @@ export class GitHubAlbum {
     if (!response.ok) { console.warn('GitHub album request failed', method, path.split('?')[0], response.status); const error = new Error('共享相册暂时无法写入，请稍后重试。'); error.status = response.status; throw error; }
     return response.json();
   }
+  async manifest(ref = this.env.ALBUM_BRANCH || 'album') {
+    const file = await this.api(`contents/photos.json?ref=${ref}`);
+    const bytes = Uint8Array.from(atob(file.content.replace(/\s/g, '')), c => c.charCodeAt(0));
+    const manifest = JSON.parse(new TextDecoder().decode(bytes));
+    if (!Array.isArray(manifest.photos)) throw new Error('共享相册数据格式异常。');
+    return manifest;
+  }
+  async image(id) {
+    if (!UUID.test(id)) throw new HttpError(404, '找不到这张照片。');
+    const branch = this.env.ALBUM_BRANCH || 'album';
+    const file = await this.fetcher(`https://api.github.com/repos/${this.env.GITHUB_REPOSITORY}/contents/photos/${id}.jpg?ref=${branch}`, {
+      headers: { Authorization: `Bearer ${this.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.raw+json', 'User-Agent': 'Starlit-Christmas-Album' },
+      redirect: 'error', signal: AbortSignal.timeout(10000)
+    });
+    if (file.status === 404) throw new HttpError(404, '找不到这张照片。');
+    if (!file.ok || !file.body) throw new Error('共享照片加载失败。');
+    return new Response(file.body, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300' } });
+  }
   async snapshot() {
     const branch = this.env.ALBUM_BRANCH || 'album';
     const ref = await this.api(`git/ref/heads/${branch}`);
     const commit = await this.api(`git/commits/${ref.object.sha}`);
-    const file = await this.api(`contents/photos.json?ref=${ref.object.sha}`);
-    const bytes = Uint8Array.from(atob(file.content.replace(/\s/g, '')), c => c.charCodeAt(0));
-    const manifest = JSON.parse(new TextDecoder().decode(bytes));
-    if (!Array.isArray(manifest.photos)) throw new Error('共享相册数据格式异常。');
+    const manifest = await this.manifest(ref.object.sha);
     return { head: ref.object.sha, tree: commit.tree.sha, manifest };
   }
   async update(transform, image) {
@@ -77,6 +92,9 @@ export class GitHubAlbum {
 }
 export function createWorker(albumFactory = env => new GitHubAlbum(env)) {
   return { async fetch(request, env) {
+    const url = new URL(request.url);
+    if (env.ASSETS && url.pathname === '/') return env.ASSETS.fetch(new Request(new URL('/index.html', url), request));
+    if (env.ASSETS && !/^\/(?:photos(?:\/|$)|health$)/.test(url.pathname)) return env.ASSETS.fetch(request);
     const origin = request.headers.get('Origin');
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
     if (origin && !allowed.includes(origin)) return json({ error: '当前网站不允许访问共享相册。' }, 403);
@@ -85,9 +103,10 @@ export function createWorker(albumFactory = env => new GitHubAlbum(env)) {
     try {
       if (request.method === 'OPTIONS') response = new Response(null, { status: 204 });
       else {
-        const path = new URL(request.url).pathname;
+        const path = url.pathname;
         if (path === '/health' && request.method === 'GET') response = json({ ready: Boolean(env.GITHUB_TOKEN), repository: env.GITHUB_REPOSITORY });
-        else if (request.method === 'GET' && path === '/photos') response = json((await albumFactory(env).snapshot()).manifest);
+        else if (request.method === 'GET' && path === '/photos') response = json(await albumFactory(env).manifest());
+        else if (request.method === 'GET' && path.startsWith('/photos/')) response = await albumFactory(env).image(path.slice('/photos/'.length));
         else if ((request.method === 'POST' && path === '/photos') || (request.method === 'DELETE' && path.startsWith('/photos/'))) {
           if (!origin) throw new HttpError(403, '请在圣诞树网页中操作。');
           if (!env.GITHUB_TOKEN) throw new HttpError(503, '共享上传尚未开通，请联系网站主人。');
@@ -96,12 +115,12 @@ export function createWorker(albumFactory = env => new GitHubAlbum(env)) {
           if (!limit.success) throw new HttpError(429, '挂照片太快啦，请一分钟后再试。');
           const album = albumFactory(env);
           if (request.method === 'POST') {
-            if (!request.headers.get('Content-Type')?.includes('application/json')) throw new HttpError(415, '请通过网页选择照片。');
+            if (!/^(?:application\/json|text\/plain)(?:;|$)/i.test(request.headers.get('Content-Type') || '')) throw new HttpError(415, '请通过网页选择照片。');
             if (Number(request.headers.get('Content-Length') || 0) > 1500000) throw new HttpError(413, '照片过大。');
             const body = await request.text();
             if (body.length > 1500000) throw new HttpError(413, '照片过大。');
             let input; try { input = JSON.parse(body); } catch { throw new HttpError(400, '照片内容无效。'); }
-            response = json(await album.add(input, request.headers.get('X-Photo-Owner')), 201);
+            response = json(await album.add(input, request.headers.get('X-Photo-Owner') || input?.owner), 201);
           } else {
             const admin = Boolean(env.ADMIN_KEY) && request.headers.get('Authorization') === `Bearer ${env.ADMIN_KEY}`;
             await album.remove(path.slice('/photos/'.length), request.headers.get('X-Photo-Owner'), admin);
@@ -109,7 +128,7 @@ export function createWorker(albumFactory = env => new GitHubAlbum(env)) {
           }
         } else response = json({ error: '接口不存在。' }, 404);
       }
-    } catch (error) { console.warn('Album request error', error.name, error.message); response = json({ error: error instanceof HttpError ? error.message : '共享相册暂时连接不上，请稍后重试。' }, error instanceof HttpError ? error.status : 503); }
+    } catch (error) { if (!(error instanceof HttpError)) console.warn('Album request error', error.name, error.message); response = json({ error: error instanceof HttpError ? error.message : '共享相册暂时连接不上，请稍后重试。' }, error instanceof HttpError ? error.status : 503); }
     for (const [key, value] of Object.entries(headers)) if (value) response.headers.set(key, value);
     return response;
   } };

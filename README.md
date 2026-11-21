@@ -31,7 +31,7 @@ npm run dev
 - 鼠标拖动或单指拖动旋转，滚轮或双指捏合缩放。
 - 底部三个按钮切换圣诞树、星河、回忆模式；点击 3D 相框查看大图。
 - 空格切换聚散，H 隐藏 / 显示界面；照片弹窗内左右方向键切换，Esc 关闭。
-- 「挂上我的照片」支持 JPG、PNG、WebP、AVIF，每张小于 20 MB，每次最多选择 5 张，共享树最多挂 64 张照片；图片会压缩并公开存入 GitHub 的 album 分支，所有访客约 30 秒内自动看到，三版共用同一相册。
+- 「挂上我的照片」支持 JPG、PNG、WebP、AVIF，每张小于 20 MB，每次最多选择 5 张，共享树最多挂 64 张照片；图片会压缩并公开存入 GitHub 的 album 分支，所有访客约 15 秒内自动看到，三版共用同一相册。
 - 打开自己上传的照片后，点击「摘下这张照片」可以从共享相册和所有访客的场景中移除（旧的本机照片只移除本机记录）；不会修改原始图片文件。六张默认插画会保留。
 - 右上角可播放本地音乐、调整雪花与旋转、切换三种配色及调整光亮。手势圆环为淡色提示，顶部浮动手势说明已移除。
 
@@ -86,4 +86,4 @@ npm run deploy
 - 星芒：https://hutaohh1.github.io/starlit-christmas/version-2.html
 - 光影：https://hutaohh1.github.io/starlit-christmas/version-3.html
 
-共享上传已开通：访客点击「挂上我的照片」并选图，即可公开挂到所有人共用的圣诞树。图片保存在本仓库 album 分支，三版自动同步。访客无需登录。Cloudflare 上传接口使用仅限本仓库的加密 GitHub secret，浏览器不接触写入令牌。维护说明见 [backend/README.md](backend/README.md)。
+共享上传已开通：访客点击「挂上我的照片」并选图，即可公开挂到所有人共用的圣诞树。图片保存在本仓库 album 分支，三版自动同步。访客无需登录。共享照片会自动出现在树上和页面的小相框中，设备无法渲染 3D 时仍可上传和查看。Cloudflare 上传接口使用仅限本仓库的加密 GitHub secret，浏览器不接触写入令牌。备用网页由同一个 Cloudflare Worker 提供，使用同一份相册。维护说明见 [backend/README.md](backend/README.md)。

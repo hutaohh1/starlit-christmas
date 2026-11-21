@@ -10,7 +10,7 @@ class MemoryAlbum extends GitHubAlbum {
   async api(path,method='GET',body){
     if(path==='git/ref/heads/album')return {object:{sha:this.head}};
     if(path.startsWith('git/commits/'))return this.commits.get(path.split('/').at(-1));
-    if(path.startsWith('contents/photos.json?ref=')){const commit=this.commits.get(path.split('=').at(-1));return {content:Buffer.from(this.trees.get(commit.tree.sha)['photos.json']).toString('base64')};}
+    if(path.startsWith('contents/photos.json?ref=')){const ref=path.split('=').at(-1);const commit=this.commits.get(ref==='album'?this.head:ref);return {content:Buffer.from(this.trees.get(commit.tree.sha)['photos.json']).toString('base64')};}
     if(path==='git/blobs')return {sha:'b'+(++this.next)};
     if(path==='git/trees'){
       const files={...this.trees.get(body.base_tree)};

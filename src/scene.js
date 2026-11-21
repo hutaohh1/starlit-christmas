@@ -114,8 +114,31 @@ export class ChristmasScene{
     this.resetPhotoFocus();
     for(const g of this.photoGroups){this.tree.remove(g);g.traverse(o=>{o.geometry?.dispose();if(o.material){o.material.map?.dispose();o.material.dispose();}});}
     this.photos=photos;this.photoGroups=[];
+    const revision = this.photoRevision = (this.photoRevision || 0) + 1;
     const textureLoader=new THREE.TextureLoader();
-    const materials=await Promise.all(photos.map(async photo=>{const texture=await textureLoader.loadAsync(photo.src);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;const aspect=texture.image.width/texture.image.height,target=.76/.91;if(aspect>target){texture.repeat.x=target/aspect;texture.offset.x=(1-texture.repeat.x)/2;}else{texture.repeat.y=aspect/target;texture.offset.y=(1-texture.repeat.y)/2;}return new THREE.MeshBasicMaterial({map:texture,toneMapped:false});}));
+    const materials = await Promise.all(photos.map(async photo => {
+      let texture;
+      for (const src of [photo.src, photo.fallbackSrc].filter(Boolean)) {
+        try { texture = await textureLoader.loadAsync(src); break; } catch {}
+      }
+      if (!texture) return new THREE.MeshBasicMaterial({ color: this.edition.paperColor });
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 4;
+      const aspect = texture.image.width / texture.image.height;
+      const target = .76 / .91;
+      if (aspect > target) {
+        texture.repeat.x = target / aspect;
+        texture.offset.x = (1 - texture.repeat.x) / 2;
+      } else {
+        texture.repeat.y = aspect / target;
+        texture.offset.y = (1 - texture.repeat.y) / 2;
+      }
+      return new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
+    }));
+    if (revision !== this.photoRevision) {
+      for (const material of materials) { material.map?.dispose(); material.dispose(); }
+      return;
+    }
     for(let i=0;i<photos.length;i++){const photo=photos[i],group=new THREE.Group();const frame=new THREE.Mesh(new THREE.BoxGeometry(.93,1.16,.07),new THREE.MeshStandardMaterial({color:this.edition.frameColor,metalness:.65,roughness:.3}));group.add(frame);const backing=new THREE.Mesh(new THREE.PlaneGeometry(.85,1.08),new THREE.MeshBasicMaterial({color:this.edition.paperColor}));backing.position.z=.038;group.add(backing);const image=new THREE.Mesh(new THREE.PlaneGeometry(.76,.91),materials[i]);image.position.set(0,.035,.043);image.userData.photoIndex=i;group.add(image);const a=i/photos.length*Math.PI*2+.45,t=.15+(i%5)/5*.7,r=treeRadius(t)+.18;group.userData={index:i,tree:new THREE.Vector3(Math.cos(a)*r,TREE_BOTTOM+t*TREE_HEIGHT,Math.sin(a)*r),scatter:new THREE.Vector3(Math.cos(a)* (3.2+(i%3)*.7),-.8+(i%4)*1.23,Math.sin(a)*2.4+1),phase:i*.9};group.scale.setScalar(this.edition.frameScale);this.photoGroups.push(group);this.tree.add(group);}
   }
   setMode(mode){this.resetPhotoFocus();this.mode=mode;this.targetSpread=mode==='tree'?0:1;}

@@ -9,7 +9,7 @@ const $=id=>document.getElementById(id);
 const paths={star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',sound:'<path d="m11 5-6 4H2v6h3l6 4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',mute:'<path d="m11 5-6 4H2v6h3l6 4Z"/><path d="m16 9 6 6m0-6-6 6"/>',settings:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#070d15"/><circle cx="15" cy="17" r="2" fill="#070d15"/>',fullscreen:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',palm:'<path d="M8 12V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 5-3 7-7 7-3 0-5-2-7-5l-3-4c-1.5-2 1-4 2.5-2L8 14"/>',fist:'<path d="M6 13V8a1.5 1.5 0 0 1 3 0v3-5a1.5 1.5 0 0 1 3 0v5-5a1.5 1.5 0 0 1 3 0v5-4a1.5 1.5 0 0 1 3 0v5c2-1 3 0 3 2l-1 4c-.5 3-3 4-7 4s-6-2-7-5l-2-3c-1-2 1-4 3-2l3 3"/>',pinch:'<path d="M11 11 8 5c-1-2-4-1-3 1l4 9-3-1c-3-1-4 2-2 3l7 4c4 2 8 0 9-3l1-6c0-3-3-3-3 0v2-4c0-2-3-2-3 0v3-4c0-2-3-2-3 0v3"/>',tree:'<path d="m12 2-5 7h3l-6 7h5l-3 4h12l-3-4h5l-6-7h3Z"/><path d="M12 20v2"/>',scatter:'<path d="m12 2 1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6Z"/><path d="m20 16 .7 2.3L23 19l-2.3.7L20 22l-.7-2.3L17 19l2.3-.7ZM3 3v4M1 5h4"/>',photo:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>',upload:'<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>'};
 const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name]}</svg>`;
 for(const [id,name]of Object.entries({'sound-button':'mute','settings-button':'settings','fullscreen-button':'fullscreen','close-settings':'close','gesture-icon':'palm','fist-icon':'fist','palm-icon':'palm','pinch-icon':'pinch','tree-icon':'tree','scatter-icon':'scatter','memories-icon':'photo','upload-icon':'upload'}))$(id).innerHTML=icon(name);
-let ownPhotos=[],sharedPhotos=[],albumOnline=false,uploadingPhotos=false,syncingPhotos=false;
+let ownPhotos=[],sharedPhotos=[],albumOnline=null,uploadingPhotos=false,syncingPhotos,viewingShared=false;
 const recentUploads=new Map(),removedSharedIds=new Set();
 let scene,mode='tree',photos=[],focusedIndex=0,toastTimeout,cameraBusy=false,cameraRequest=0,lastPinch=-Infinity,photoTarget=null,swipeAnchor=null,lastSwipe=0;
 function musicState(state){
@@ -28,7 +28,8 @@ const edition=Number(document.body.dataset.edition||3);
 for(const link of document.querySelectorAll('[data-edition-link]')){if(Number(link.dataset.editionLink)===edition){link.classList.add('active');link.setAttribute('aria-current','page');}}
 function toast(message,duration=3600){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('visible'),duration);}
 function setMode(next,notify=false){mode=next;scene?.setMode(next);document.body.dataset.mode=next;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===next;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active);});$('scene-status').textContent=({tree:'星光已为你点亮',scatter:'让回忆散落星河',memories:'好时光，正在闪烁'})[next];$('interaction-tip').textContent=next==='tree'?'拖动旋转 · 滚轮缩放 · 按空格散开':'点击相框查看回忆 · 拖动旋转 · 空格重聚';}
-function openPhoto(index){if(!photos.length)return;scene?.resetPhotoFocus();photoTarget=null;focusedIndex=(index+photos.length)%photos.length;const photo=photos[focusedIndex];$('focused-photo').src=photo.src;$('focused-photo').alt=photo.caption;$('focused-caption').textContent=photo.caption;$('remove-photo').hidden=photo.isDefault||(photo.isShared&&!photo.canRemove);$('photo-sharing-note').textContent=photo.isShared?(photo.canRemove?'大家都能看到 · 你可以摘下这张照片':'来自共享圣诞树 · 大家都能看到'):photo.isDefault?'':'仅保存在你的浏览器里';$('photo-sharing-note').hidden=photo.isDefault;$('remove-photo').disabled=false;$('photo-position').textContent=`${focusedIndex+1} / ${photos.length}`;if(!$('photo-dialog').open)$('photo-dialog').showModal();}
+function activePhotos(){return viewingShared?sharedPhotos:photos;}
+function openPhoto(index){const photos=activePhotos();if(!photos.length)return;scene?.resetPhotoFocus();photoTarget=null;focusedIndex=(index+photos.length)%photos.length;const photo=photos[focusedIndex];showPhotoImage($('focused-photo'),photo);$('focused-caption').textContent=photo.caption;$('remove-photo').hidden=photo.isDefault||(photo.isShared&&!photo.canRemove);$('photo-sharing-note').textContent=photo.isShared?(photo.canRemove?'大家都能看到 · 你可以摘下这张照片':'来自共享圣诞树 · 大家都能看到'):photo.isDefault?'':'仅保存在你的浏览器里';$('photo-sharing-note').hidden=photo.isDefault;$('remove-photo').disabled=false;$('photo-position').textContent=`${focusedIndex+1} / ${photos.length}`;if(!$('photo-dialog').open)$('photo-dialog').showModal();}
 function closePhoto(){$('photo-dialog').close();scene?.resetPhotoFocus();photoTarget=null;swipeAnchor=null;}
 function updateCameraUI(enabled){$('gesture-button').classList.toggle('enabled',enabled);$('gesture-button-label').textContent=enabled?'手势魔法已开启':'开启手势魔法';$('gesture-button').setAttribute('aria-pressed',enabled);$('camera-panel').hidden=!enabled;$('privacy-note').textContent=enabled?'识别只在本机进行 · 点击按钮可关闭':'允许摄像头，试试隔空点亮圣诞';}
 function stopCamera(){cameraRequest++;cameraBusy=false;hand.stop();updateCameraUI(false);$('gesture-button').disabled=false;}
@@ -69,16 +70,17 @@ for(const button of document.querySelectorAll('[data-mode]'))button.addEventList
 $('guide-button').addEventListener('click',()=>$('guide-dialog').showModal());$('close-guide').addEventListener('click',()=>$('guide-dialog').close());$('guide-done').addEventListener('click',()=>$('guide-dialog').close());$('close-photo').addEventListener('click',closePhoto);
 let removingPhoto=false;
 $('remove-photo').addEventListener('click',async()=>{
-  const photo=photos[focusedIndex];if(removingPhoto||!photo||photo.isDefault)return;
+  const photo=activePhotos()[focusedIndex];if(removingPhoto||!photo||photo.isDefault)return;
   removingPhoto=true;$('remove-photo').disabled=true;
   try{
     if(photo.isShared){if(!photo.canRemove)return;await removeSharedPhoto(photo);removedSharedIds.add(photo.id);recentUploads.delete(photo.id);sharedPhotos=sharedPhotos.filter(item=>item.id!==photo.id);}else{await deletePhoto(photo.id);ownPhotos=ownPhotos.filter(item=>item.id!==photo.id);}
     photos=composePhotos();
     closePhoto();$('photo-count').textContent=photos.length;
-    await scene?.setPhotos(photos);toast('这张照片已摘下。');
+    renderPhotos();toast('这张照片已摘下。');
   }catch(error){console.warn('Remove photo:',error);toast('照片暂时无法摘下，请重试。');}
-  finally{removingPhoto=false;$('remove-photo').disabled=false;updateAlbumStatus();}
+  finally{removingPhoto=false;$('remove-photo').disabled=false;albumStatus();}
 });
+$('photo-dialog').addEventListener('close',()=>{viewingShared=false;});
 $('next-photo').addEventListener('click',()=>openPhoto(focusedIndex+1));$('previous-photo').addEventListener('click',()=>openPhoto(focusedIndex-1));
 for(const dialog of [$('guide-dialog'),$('photo-dialog')])dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 function toggleSettings(force){const show=force??$('settings-panel').hidden;if(show)$('music-panel').hidden=true;$('settings-panel').hidden=!show;$('settings-button').setAttribute('aria-expanded',show);}
@@ -103,46 +105,159 @@ $('local-music-button').addEventListener('click',()=>$('local-music-input').clic
 $('local-music-input').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const name=await music.useLocalFile(file);$('music-status').textContent=name+' · 已在本机播放，默认循环';toast('歌曲已开始循环播放。');}catch(error){toast(error.message||'音频无法播放，请尝试 MP3 或 M4A 格式。');}e.target.value='';});
 $('upload-button').addEventListener('click',()=>$('photo-input').click());
 function composePhotos(){return [...ownPhotos,...sharedPhotos,...Array.from({length:6},(_,i)=>makePostcard(i))];}
-function updateAlbumStatus(){
-  $('album-status').textContent=albumOnline?'照片公开挂上 · 所有人可见':'仅保存在本机 · 共享上传待开通';
-  $('upload-button').title=albumOnline?'选择照片后会公开保存到 GitHub，所有访客可见':'选择照片，仅保存在当前浏览器；共享接口尚未开通';
+function albumStatus(message, error = false) {
+  const status = $('album-status');
+  status.textContent = message ?? (albumOnline === false ? '仅保存在本机' : '公开挂上 · 所有人可见');
+  status.toggleAttribute('data-error', error);
 }
-async function refreshShared(){
-  if(syncingPhotos||uploadingPhotos||removingPhoto||$('photo-dialog').open)return;
-  syncingPhotos=true;
-  try{
-    const remote=await loadSharedPhotos(),now=Date.now();
-    for(const [id,item]of recentUploads)if(remote.some(p=>p.id===id)||item.until<now)recentUploads.delete(id);
-    sharedPhotos=[...recentUploads.values()].map(item=>item.photo).concat(remote).filter(p=>!removedSharedIds.has(p.id));
-    const next=composePhotos();
-    if(JSON.stringify(next.map(p=>[p.id,p.src,p.caption,p.canRemove]))!==JSON.stringify(photos.map(p=>[p.id,p.src,p.caption,p.canRemove]))){photos=next;$('photo-count').textContent=photos.length;await scene?.setPhotos(photos);}
-  }catch(error){console.warn('Shared album:',error.message);}finally{syncingPhotos=false;}
+function showPhotoImage(image, photo) {
+  image.onerror = photo.fallbackSrc ? () => {
+    image.onerror = null;
+    image.src = photo.fallbackSrc;
+  } : null;
+  image.alt = photo.caption;
+  image.src = photo.src;
 }
-$('photo-input').addEventListener('change',async e=>{
-  const files=[...e.target.files];if(!files.length)return;
-  uploadingPhotos=true;$('upload-button').disabled=true;let added=0,lastError;
-  try{
-    const config=await sharedConfig();albumOnline=Boolean(config.apiUrl);updateAlbumStatus();
-    const remaining=Math.max(0,(albumOnline?64:24)-(albumOnline?sharedPhotos.length:ownPhotos.length));
-    if(!remaining)throw new Error('树上已经挂满照片啦，请先摘下一张再试。');
-    for(const file of files.slice(0,Math.min(remaining,5))){
-      try{
-        $('album-status').textContent=albumOnline?'正在把照片挂到大家的树上…':'正在挂上照片…';
-        const selected=await readPhoto(file);
-        if(albumOnline){const photo=await uploadSharedPhoto(selected);sharedPhotos.unshift(photo);recentUploads.set(photo.id,{photo,until:Date.now()+120000});}
-        else{await savePhoto(selected);ownPhotos.unshift(selected);}
-        added++;
-      }catch(error){lastError=error;}
+let stripKey = '';
+function renderSharedStrip() {
+  const key = JSON.stringify(sharedPhotos.map(({ id, src, caption }) => [id, src, caption]));
+  if (stripKey === key) return;
+  stripKey = key;
+  const strip = $('shared-strip');
+  strip.hidden = sharedPhotos.length === 0;
+  const thumbnails = sharedPhotos.map((photo, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'shared-thumbnail';
+    button.setAttribute('aria-label', `查看共享照片：${photo.caption}`);
+    const image = document.createElement('img');
+    image.loading = index < 5 ? 'eager' : 'lazy';
+    image.decoding = 'async';
+    showPhotoImage(image, photo);
+    button.append(image);
+    button.addEventListener('click', () => {
+      viewingShared = true;
+      openPhoto(index);
+    });
+    return button;
+  });
+  strip.replaceChildren(...thumbnails);
+}
+function renderPhotos() {
+  renderSharedStrip();
+  $('photo-count').textContent = photos.length;
+  scene?.setPhotos(photos).catch(error => console.warn('Photo frames:', error));
+}
+function refreshShared() {
+  if (syncingPhotos) return syncingPhotos;
+  if (uploadingPhotos || removingPhoto || $('photo-dialog').open) return Promise.resolve(false);
+  syncingPhotos = (async () => {
+    const config = await sharedConfig();
+    albumOnline = Boolean(config.apiUrl);
+    const remote = await loadSharedPhotos();
+    if (uploadingPhotos || removingPhoto || $('photo-dialog').open) return false;
+    const now = Date.now();
+    for (const [id, item] of recentUploads) {
+      if (remote.some(photo => photo.id === id) || item.until < now) recentUploads.delete(id);
     }
-    if(added){photos=composePhotos();await scene?.setPhotos(photos);$('photo-count').textContent=photos.length;setMode('memories');toast(albumOnline?'已挂上 '+added+' 张照片，大家都能看到了。':'已挂上 '+added+' 张照片，目前仅在这个浏览器里保存。',5500);}
-    if(lastError)toast(lastError.message,6500);
-    if(files.length>Math.min(remaining,5))toast('每次最多挂 5 张照片，请分次选择。',5500);
-  }catch(error){toast(error.message,6500);}finally{uploadingPhotos=false;$('upload-button').disabled=false;e.target.value='';updateAlbumStatus();}
+    sharedPhotos = [...recentUploads.values()].map(item => item.photo).concat(remote).filter(photo => !removedSharedIds.has(photo.id));
+    const next = composePhotos();
+    if (JSON.stringify(next) !== JSON.stringify(photos)) {
+      photos = next;
+      renderPhotos();
+    }
+    if ($('album-status').textContent === '正在连接共享相册…') albumStatus();
+    return true;
+  })().catch(error => {
+    console.warn('Shared album:', error.message);
+    if (!uploadingPhotos) albumStatus('共享相册连接失败，正在自动重试', true);
+    return false;
+  }).finally(() => { syncingPhotos = null; });
+  return syncingPhotos;
+}
+$('photo-input').addEventListener('change', async event => {
+  const files = [...event.target.files];
+  if (!files.length) return;
+  uploadingPhotos = true;
+  $('upload-button').disabled = true;
+  let added = 0;
+  let lastError;
+  try {
+    albumOnline = Boolean((await sharedConfig()).apiUrl);
+    const available = albumOnline ? 64 - sharedPhotos.length : 24 - ownPhotos.length;
+    if (available <= 0) throw new Error('树上已经挂满照片，请先摘下一张。');
+    const limit = Math.min(available, 5);
+    for (const file of files.slice(0, limit)) {
+      try {
+        albumStatus('正在挂上照片…');
+        const selected = await readPhoto(file);
+        if (albumOnline) {
+          const photo = await uploadSharedPhoto(selected);
+          sharedPhotos.unshift(photo);
+          recentUploads.set(photo.id, { photo, until: Date.now() + 120000 });
+        } else {
+          await savePhoto(selected);
+          ownPhotos.unshift(selected);
+        }
+        added++;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (added) {
+      photos = composePhotos();
+      renderPhotos();
+      setMode('memories');
+      albumStatus(albumOnline ? '照片已挂上 · 所有人可见' : '照片已保存在本机');
+      toast(albumOnline ? '已挂上 ' + added + ' 张照片，大家都能看到。' : '照片已保存在这个浏览器里。', 5500);
+    }
+    if (!lastError && files.length > limit) toast('本次挂上 ' + added + ' 张照片，每次最多选 5 张。', 5500);
+  } catch (error) {
+    lastError = error;
+  } finally {
+    uploadingPhotos = false;
+    $('upload-button').disabled = false;
+    event.target.value = '';
+    if (lastError) {
+      const message = (added ? '已挂上 ' + added + ' 张。其余照片：' : '') + lastError.message;
+      albumStatus(message, true);
+      toast(message, 6500);
+    }
+  }
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshShared();});
-setInterval(()=>{if(!document.hidden)refreshShared();},30000);
+setInterval(()=>{if(!document.hidden)refreshShared();},15000);
 document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement?.tagName))return;if($('photo-dialog').open){if(e.key==='ArrowRight')openPhoto(focusedIndex+1);if(e.key==='ArrowLeft')openPhoto(focusedIndex-1);return;}if($('guide-dialog').open)return;if(e.code==='Space'){e.preventDefault();setMode(mode==='tree'?'scatter':'tree');}if(e.key.toLowerCase()==='h')toggleUI();if(e.key==='Escape')toggleSettings(false);});
 addEventListener('pagehide',()=>{hand.stop();music.stop();});
-async function init(){try{ownPhotos=await loadPhotos();photos=composePhotos();$('photo-count').textContent=photos.length;scene=new ChristmasScene($('scene'),{edition,onReady:()=>{$('loading-screen').classList.add('loaded');setMode('tree');},onPhoto:openPhoto,onError:error=>toast(error.message,8000)});await scene.setPhotos(photos);if(scene.reduced){$('snow-toggle').checked=false;$('rotate-toggle').checked=false;}$('scene-status').textContent='星光已为你点亮';try{albumOnline=Boolean((await sharedConfig()).apiUrl);}catch{}updateAlbumStatus();refreshShared();}catch(error){console.error(error);$('loading-screen').classList.add('failed');$('loading-screen').replaceChildren();const star=document.createElement('span');star.className='loading-star';star.textContent='✦';const text=document.createElement('span');text.textContent='星光暂时无法点亮。请使用支持 WebGL 的 Chrome 或 Edge，并开启硬件加速后刷新。';$('loading-screen').append(star,text);}}
+async function init() {
+  photos = composePhotos();
+  refreshShared();
+  loadPhotos().then(local => {
+    if (!local.length) return;
+    ownPhotos = [...ownPhotos, ...local.filter(photo => !ownPhotos.some(item => item.id === photo.id))];
+    photos = composePhotos();
+    renderPhotos();
+  });
+  try {
+    scene = new ChristmasScene($('scene'), {
+      edition,
+      onReady: () => $('loading-screen').classList.add('loaded'),
+      onPhoto: openPhoto,
+      onError: error => toast(error.message, 8000)
+    });
+    if (scene.reduced) {
+      $('snow-toggle').checked = false;
+      $('rotate-toggle').checked = false;
+    }
+    setMode(mode);
+    renderPhotos();
+  } catch (error) {
+    console.warn('3D scene:', error.message);
+    document.body.classList.add('scene-unavailable');
+    $('loading-screen').classList.add('loaded');
+    $('scene-status').textContent = '共享相册可用';
+    $('gesture-button').style.display = 'none';
+    $('gesture-button').nextElementSibling.textContent = '此浏览器无法显示 3D。可以直接挂照片和看共享相册。';
+  }
+}
 init();
-
