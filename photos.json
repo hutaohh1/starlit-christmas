@@ -2,6 +2,13 @@
   "version": 1,
   "photos": [
     {
+      "id": "efb969e8-132e-4665-b85b-82b2ded8973a",
+      "path": "photos/efb969e8-132e-4665-b85b-82b2ded8973a.jpg",
+      "caption": "微信图片_20261121223812_430_2",
+      "ownerHash": "554914c8baaae5b07990ea6c29814f73aa95f5ad735a3cabd6e7889163acd395",
+      "createdAt": "2026-11-21T14:39:39.524Z"
+    },
+    {
       "id": "26bda912-3223-4310-8d9d-c26103b4c0c7",
       "path": "photos/26bda912-3223-4310-8d9d-c26103b4c0c7.jpg",
       "caption": "微信图片_20261121223805_423_2",
