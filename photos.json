@@ -2,6 +2,13 @@
   "version": 1,
   "photos": [
     {
+      "id": "c049dbb7-c9f5-43a2-a920-2efba9739a1f",
+      "path": "photos/c049dbb7-c9f5-43a2-a920-2efba9739a1f.jpg",
+      "caption": "Album QA 1795270532692",
+      "ownerHash": "554bbdf0c9b2bf9f5fad32abcc0284e90b0f68ccddcf7a83dbfe32b4a336cb0a",
+      "createdAt": "2026-11-21T14:16:11.330Z"
+    },
+    {
       "id": "123d0384-8542-42b7-af82-d18eef231ca5",
       "path": "photos/123d0384-8542-42b7-af82-d18eef231ca5.jpg",
       "caption": "3e47ae3e906c3244b02b355411f58d47",
