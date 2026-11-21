@@ -1,12 +1,4 @@
 {
   "version": 1,
-  "photos": [
-    {
-      "id": "281e7deb-df13-4d1d-bfce-1b36f849e111",
-      "path": "photos/281e7deb-df13-4d1d-bfce-1b36f849e111.jpg",
-      "caption": "3e47ae3e906c3244b02b355411f58d47",
-      "ownerHash": "426d0e375894cf07a1a0b349f19a05e4ff1db7625bdb5714929933fc746b6b41",
-      "createdAt": "2026-11-21T05:59:25.438Z"
-    }
-  ]
+  "photos": []
 }
