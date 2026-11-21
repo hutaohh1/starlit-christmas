@@ -19,10 +19,10 @@ export function validatePhoto(input) {
 }
 export class GitHubAlbum {
   constructor(env, fetcher = (...args) => fetch(...args)) { this.env = env; this.fetcher = fetcher; }
-  async api(path, method = 'GET', body) {
+  async api(path, method = 'GET', body, timeout = 15000) {
     const response = await this.fetcher(`https://api.github.com/repos/${this.env.GITHUB_REPOSITORY}/${path}`, {
       method, headers: { Authorization: `Bearer ${this.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Starlit-Christmas-Album', 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000)
+      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout)
     });
     if (!response.ok) { console.warn('GitHub album request failed', method, path.split('?')[0], response.status); const error = new Error('共享相册暂时无法写入，请稍后重试。'); error.status = response.status; throw error; }
     return response.json();
@@ -36,14 +36,25 @@ export class GitHubAlbum {
   }
   async image(id) {
     if (!UUID.test(id)) throw new HttpError(404, '找不到这张照片。');
-    const branch = this.env.ALBUM_BRANCH || 'album';
-    const file = await this.fetcher(`https://api.github.com/repos/${this.env.GITHUB_REPOSITORY}/contents/photos/${id}.jpg?ref=${branch}`, {
-      headers: { Authorization: `Bearer ${this.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.raw+json', 'User-Agent': 'Starlit-Christmas-Album' },
-      redirect: 'error', signal: AbortSignal.timeout(10000)
-    });
-    if (file.status === 404) throw new HttpError(404, '找不到这张照片。');
-    if (!file.ok || !file.body) throw new Error('共享照片加载失败。');
-    return new Response(file.body, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300' } });
+    const branch = encodeURIComponent(this.env.ALBUM_BRANCH || 'album');
+    const path = `photos/${id}.jpg`;
+    let bytes;
+    try {
+      // Uploaded JPEGs fit within the GitHub Contents API's inline base64 limit.
+      const file = await this.api(`contents/${path}?ref=${branch}`, 'GET', undefined, 6000);
+      if (file.encoding !== 'base64' || typeof file.content !== 'string') throw new Error('Missing photo content');
+      bytes = Uint8Array.from(atob(file.content), character => character.charCodeAt(0));
+    } catch (error) {
+      if (error.status === 404) throw new HttpError(404, '找不到这张照片。');
+      const publicUrl = `https://raw.githubusercontent.com/${this.env.GITHUB_REPOSITORY}/${branch}/${path}`;
+      const file = await this.fetcher(publicUrl, { signal: AbortSignal.timeout(6000) });
+      if (!file.ok) throw new Error('共享照片加载失败。');
+      bytes = new Uint8Array(await file.arrayBuffer());
+    }
+    if (bytes.length < 100 || bytes.length > MAX_IMAGE_BYTES || bytes[0] !== 255 || bytes[1] !== 216 || bytes[2] !== 255) {
+      throw new Error('共享照片格式异常。');
+    }
+    return new Response(bytes, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=300' } });
   }
   async snapshot() {
     const branch = this.env.ALBUM_BRANCH || 'album';

@@ -68,3 +68,38 @@ test('a second visitor reads a photo uploaded by the first; failures cannot fake
   const read=await worker.fetch(new Request('https://api.example/photos',{headers:{Origin:'https://tree.example'}}),env);assert.equal((await read.json()).photos[0].id,data.photo.id);
   const blocked=createWorker(()=>({add:async()=>{throw Error('offline');}}));const result=await blocked.fetch(req(),env);assert.equal(result.status,503);assert.ok((await result.json()).error);
 });
+
+const imageId = '11111111-1111-4111-8111-111111111111';
+const imagePath = `photos/${imageId}.jpg`;
+const imageRequest = () => new Request(`https://api.example/photos/${imageId}`, { headers: { Origin: 'https://tree.example' } });
+
+test('the Worker decodes GitHub Contents JSON into a cross-origin JPEG', async () => {
+  const album = new GitHubAlbum(env, async url => {
+    assert.equal(new URL(url).pathname, `/repos/${env.GITHUB_REPOSITORY}/contents/${imagePath}`);
+    return Response.json({ encoding: 'base64', content: jpeg.toString('base64') });
+  });
+  const response = await createWorker(() => album).fetch(imageRequest(), env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Content-Type'), 'image/jpeg');
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://tree.example');
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), jpeg);
+});
+
+test('image lookup uses the server-side public fallback on an upstream failure, but honors deletion', async () => {
+  let status = 502;
+  let fallbackCalls = 0;
+  const album = new GitHubAlbum(env, async (url, options) => {
+    if (new URL(url).hostname === 'api.github.com') return new Response(null, { status });
+    fallbackCalls++;
+    assert.equal(url, `https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/album/${imagePath}`);
+    assert.equal(new Headers(options.headers).has('Authorization'), false);
+    return new Response(jpeg);
+  });
+  const worker = createWorker(() => album);
+  const result = await worker.fetch(imageRequest(), env);
+  assert.equal(fallbackCalls, 1);
+  assert.deepEqual(Buffer.from(await result.arrayBuffer()), jpeg);
+  status = 404;
+  assert.equal((await worker.fetch(imageRequest(), env)).status, 404);
+  assert.equal(fallbackCalls, 1);
+});

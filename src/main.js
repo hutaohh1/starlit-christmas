@@ -80,7 +80,10 @@ $('remove-photo').addEventListener('click',async()=>{
   }catch(error){console.warn('Remove photo:',error);toast('照片暂时无法摘下，请重试。');}
   finally{removingPhoto=false;$('remove-photo').disabled=false;albumStatus();}
 });
-$('photo-dialog').addEventListener('close',()=>{viewingShared=false;});
+$('photo-dialog').addEventListener('close', () => {
+  viewingShared = false;
+  refreshShared();
+});
 $('next-photo').addEventListener('click',()=>openPhoto(focusedIndex+1));$('previous-photo').addEventListener('click',()=>openPhoto(focusedIndex-1));
 for(const dialog of [$('guide-dialog'),$('photo-dialog')])dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
 function toggleSettings(force){const show=force??$('settings-panel').hidden;if(show)$('music-panel').hidden=true;$('settings-panel').hidden=!show;$('settings-button').setAttribute('aria-expanded',show);}
@@ -105,10 +108,11 @@ $('local-music-button').addEventListener('click',()=>$('local-music-input').clic
 $('local-music-input').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const name=await music.useLocalFile(file);$('music-status').textContent=name+' · 已在本机播放，默认循环';toast('歌曲已开始循环播放。');}catch(error){toast(error.message||'音频无法播放，请尝试 MP3 或 M4A 格式。');}e.target.value='';});
 $('upload-button').addEventListener('click',()=>$('photo-input').click());
 function composePhotos(){return [...ownPhotos,...sharedPhotos,...Array.from({length:6},(_,i)=>makePostcard(i))];}
-function albumStatus(message, error = false) {
+function albumStatus(message, error = false, source = 'upload') {
   const status = $('album-status');
   status.textContent = message ?? (albumOnline === false ? '仅保存在本机' : '公开挂上 · 所有人可见');
   status.toggleAttribute('data-error', error);
+  status.dataset.source = source;
 }
 function showPhotoImage(image, photo) {
   image.onerror = photo.fallbackSrc ? () => {
@@ -166,11 +170,15 @@ function refreshShared() {
       photos = next;
       renderPhotos();
     }
-    if ($('album-status').textContent === '正在连接共享相册…') albumStatus();
+    const status = $('album-status');
+    if (!status.dataset.source || status.dataset.source === 'sync') albumStatus();
     return true;
   })().catch(error => {
     console.warn('Shared album:', error.message);
-    if (!uploadingPhotos) albumStatus('共享相册连接失败，正在自动重试', true);
+    const status = $('album-status');
+    if (!uploadingPhotos && (!status.hasAttribute('data-error') || status.dataset.source === 'sync')) {
+      albumStatus('共享相册连接失败，正在自动重试', true, 'sync');
+    }
     return false;
   }).finally(() => { syncingPhotos = null; });
   return syncingPhotos;
@@ -225,6 +233,7 @@ $('photo-input').addEventListener('change', async event => {
     }
   }
 });
+addEventListener('online', () => refreshShared());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshShared();});
 setInterval(()=>{if(!document.hidden)refreshShared();},15000);
 document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement?.tagName))return;if($('photo-dialog').open){if(e.key==='ArrowRight')openPhoto(focusedIndex+1);if(e.key==='ArrowLeft')openPhoto(focusedIndex-1);return;}if($('guide-dialog').open)return;if(e.code==='Space'){e.preventDefault();setMode(mode==='tree'?'scatter':'tree');}if(e.key.toLowerCase()==='h')toggleUI();if(e.key==='Escape')toggleSettings(false);});
