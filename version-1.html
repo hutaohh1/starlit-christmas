@@ -8,8 +8,8 @@
     <title>星愿圣诞 · 初雪版 V1</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath fill='%23e4c98e' d='m20 2 5 12 13 1-10 9 3 13-11-7-11 7 3-13L2 15l13-1z'/%3E%3C/svg%3E" />
     <script type="module" crossorigin src="./assets/three-scene-B6Ibza_L.js"></script>
-    <script type="module" crossorigin src="./assets/main-BGcQYNuh.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/main-CnKh2_eE.css">
+    <script type="module" crossorigin src="./assets/main-DnPGmEfa.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-DHtgO3i0.css">
   </head>
   <body data-edition="1">
     <div id="scene" aria-label="可交互的金色粒子圣诞树"></div>
@@ -58,12 +58,13 @@
     <footer class="footer ui">
       <div class="gesture-hints"><div><span id="fist-icon"></span><span>握拳<span class="hint-detail">聚拢星光</span></span></div><div><span id="palm-icon"></span><span>张掌<span class="hint-detail">漫天星河</span></span></div><div><span id="pinch-icon"></span><span>捏合<span class="hint-detail">拾起回忆</span></span></div></div>
       <div class="bottom-center"><nav class="mode-dock" aria-label="场景模式"><button class="mode-button active" data-mode="tree" aria-pressed="true"><span id="tree-icon"></span><span>圣诞树</span></button><button class="mode-button" data-mode="scatter" aria-pressed="false"><span id="scatter-icon"></span><span>漫天星河</span></button><button class="mode-button" data-mode="memories" aria-pressed="false"><span id="memories-icon"></span><span>我的回忆</span><span id="photo-count">6</span></button></nav><span class="interaction-tip" id="interaction-tip">拖动旋转 · 滚轮缩放 · 按空格散开</span></div>
-      <div class="upload-area"><button id="upload-button"><span id="upload-icon"></span>挂上我的照片 <span>＋</span></button><button id="view-album-button">看共享照片</button><span id="album-status" aria-live="polite">正在连接共享相册…</span></div>
+      <div class="upload-area"><button id="upload-button"><span id="upload-icon"></span>挂上我的照片 <span>＋</span></button><span id="album-status" aria-live="polite">正在连接共享相册…</span></div>
     </footer>
+    <section class="shared-strip ui" id="shared-strip" aria-label="大家挂上的照片" hidden></section>
     <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp,image/avif,.jpg,.jpeg,.png,.webp,.avif" multiple hidden />
     <button id="show-ui-button" class="restore-ui" hidden aria-label="显示界面">显示界面 <kbd>H</kbd></button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <dialog class="guide-dialog" id="guide-dialog"><button class="dialog-close" id="close-guide" aria-label="关闭玩法说明">×</button><span class="dialog-star">✦</span><h2>一点手势，一场圣诞魔法</h2><p>打开摄像头，伸出手掌；手势保持一小会儿即可识别。</p><div class="guide-steps"><div><span>✊</span><h3>握紧拳头</h3><p>散落的星光重新聚成圣诞树。</p></div><div><span>✋</span><h3>张开手掌</h3><p>让圣诞树化作满天星河。</p></div><div><span>🤏</span><h3>捏合手指</h3><p>食指移到照片上，亮框后轻轻捏合即可打开。</p></div></div><p class="guide-alternative">张开手掌移动，可以转动视角；两手拉开放大、靠拢缩小。查看照片时，张掌左右轻挥可切换，握拳关闭。也可以拖动旋转、滚轮缩放，按空格切换聚散，H 隐藏界面。</p><p class="local-note">手势只在本机识别。选择的照片会公开保存在 GitHub，点击「看共享照片」即可查看。</p><button class="primary-button" id="guide-done">去许个愿吧</button></dialog>
+    <dialog class="guide-dialog" id="guide-dialog"><button class="dialog-close" id="close-guide" aria-label="关闭玩法说明">×</button><span class="dialog-star">✦</span><h2>一点手势，一场圣诞魔法</h2><p>打开摄像头，伸出手掌；手势保持一小会儿即可识别。</p><div class="guide-steps"><div><span>✊</span><h3>握紧拳头</h3><p>散落的星光重新聚成圣诞树。</p></div><div><span>✋</span><h3>张开手掌</h3><p>让圣诞树化作满天星河。</p></div><div><span>🤏</span><h3>捏合手指</h3><p>食指移到照片上，亮框后轻轻捏合即可打开。</p></div></div><p class="guide-alternative">张开手掌移动，可以转动视角；两手拉开放大、靠拢缩小。查看照片时，张掌左右轻挥可切换，握拳关闭。也可以拖动旋转、滚轮缩放，按空格切换聚散，H 隐藏界面。</p><p class="local-note">手势只在本机识别。选择的照片会公开保存在 GitHub，并自动显示给所有访客。</p><button class="primary-button" id="guide-done">去许个愿吧</button></dialog>
     <dialog class="photo-dialog" id="photo-dialog"><button class="dialog-close" id="close-photo" aria-label="关闭照片">×</button><div class="photo-view"><img id="focused-photo" alt="圣诞回忆" /><span id="focused-caption"></span></div><div class="photo-navigation"><button id="previous-photo" aria-label="上一张照片">←</button><span id="photo-position"></span><button id="next-photo" aria-label="下一张照片">→</button></div><button id="remove-photo" class="remove-photo" hidden>摘下这张照片</button><p id="photo-sharing-note" hidden></p><p>此刻，就是最好的礼物。</p></dialog>
     <div id="loading-screen"><span class="loading-star">✦</span><span>正在收集冬夜的星光</span><div class="loading-line"></div></div>
   </body>
